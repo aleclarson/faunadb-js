@@ -7,7 +7,14 @@ export class Expr<T = any> {
   constructor(obj: JsonObject)
 
   readonly _isFaunaExpr?: boolean
-  static toString(expr: Expr): string
+  static toString(expr: Expr, compact?: boolean): string
+  static toString(
+    expr: Expr,
+    options?: {
+      compact?: boolean
+      map?: (str: string, keyPath: string[]) => string
+    }
+  ): string
 
   /** This enforces type nominality. */
   private _type: T

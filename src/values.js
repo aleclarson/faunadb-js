@@ -217,7 +217,7 @@ function SetRef(value) {
 util.inherits(SetRef, Value)
 
 wrapToString(SetRef, function() {
-  return Expr.toString(this.value)
+  return Expr.toString(this.value, true)
 })
 
 /** @ignore */
@@ -353,7 +353,7 @@ function Query(value) {
 util.inherits(Query, Value)
 
 wrapToString(Query, function() {
-  return 'Query(' + Expr.toString(this.value) + ')'
+  return 'Query(' + Expr.toString(this.value, true) + ')'
 })
 
 /** @ignore */

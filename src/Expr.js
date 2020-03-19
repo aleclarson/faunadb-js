@@ -59,7 +59,7 @@ var specialCases = {
   findstrregex: 'FindStrRegex',
   gt: 'GT',
   gte: 'GTE',
-  is_nonempty: 'is_non_empty',
+  is_nonempty: 'IsNonEmpty',
   lowercase: 'LowerCase',
   lt: 'LT',
   lte: 'LTE',
@@ -74,100 +74,129 @@ var specialCases = {
   uppercase: 'UpperCase',
 }
 
-var exprToString = function(expr, caller) {
-  var isExpr = function(e) {
-    return e instanceof Expr || util.checkInstanceHasProperty(e, '_isFaunaExpr')
-  }
+var keyPath = []
+var compact = false
+var printDepth = 0
 
-  if (isExpr(expr)) {
-    if ('value' in expr) return expr.toString()
+var indent = function(input) {
+  if (typeof input === 'function') {
+    printDepth += 1
+    var output = input()
+    printDepth -= 1
+    return output
+  }
+  if (compact) {
+    return input
+  }
+  let indent = ''
+  for (let i = 0; i < 2 * printDepth; i++) {
+    indent += i % 2 ? ' ' : '・'
+  }
+  return indent + input
+}
+
+var eol = function(input) {
+  return input + (compact ? '' : '\n')
+}
+
+var isCompact = function(expr) {
+  return !(expr instanceof Expr)
+}
+
+var exprToString = function(expr, options) {
+  if (util.checkInstanceHasProperty(expr, '_isFaunaExpr')) {
+    if ('value' in expr) {
+      return expr.toString()
+    }
     expr = expr.raw
   }
 
-  var type = typeof expr
-
-  if (type === 'string') {
-    return JSON.stringify(expr)
+  if (expr == null) {
+    return String(expr)
   }
 
-  if (type === 'symbol' || type === 'number' || type === 'boolean') {
-    return expr.toString()
+  switch (typeof expr) {
+    case 'string':
+      return JSON.stringify(expr)
+    case 'boolean':
+    case 'number':
+    case 'symbol':
+      return String(expr)
   }
 
-  if (type === 'undefined') {
-    return 'undefined'
+  if (!options) {
+    options = {}
+  } else if (options === true) {
+    options = { compact: true }
   }
 
-  if (expr === null) {
-    return 'null'
-  }
+  var map =
+    options.map ||
+    function(str) {
+      return str
+    }
 
-  var printObject = function(obj) {
+  var printArray = function(array, toStr) {
+    if (!array.length) {
+      return '[]'
+    }
     return (
-      '{' +
-      Object.keys(obj)
-        .map(function(k) {
-          return k + ': ' + exprToString(obj[k])
-        })
-        .join(', ') +
-      '}'
+      eol('[') +
+      indent(function() {
+        var length = array.length
+        return array
+          .map(function(value, i) {
+            keyPath.push(i)
+            value = map(toStr(value), keyPath)
+            keyPath.pop()
+            return indent(value) + (compact && i === length - 1 ? '' : eol(','))
+          })
+          .join('')
+      }) +
+      indent(']')
     )
   }
 
-  var printArray = function(array, toStr) {
-    return array
-      .map(function(item) {
-        return toStr(item)
-      })
-      .join(', ')
-  }
-
   if (Array.isArray(expr)) {
-    var array = printArray(expr, exprToString)
-
-    return varArgsFunctions.indexOf(caller) != -1 ? array : '[' + array + ']'
-  }
-
-  if ('match' in expr) {
-    var matchStr = exprToString(expr['match'])
-    var terms = expr['terms'] || []
-
-    if (isExpr(terms)) terms = terms.raw
-
-    if (Array.isArray(terms) && terms.length == 0)
-      return 'Match(' + matchStr + ')'
-
-    if (Array.isArray(terms)) {
-      return (
-        'Match(' + matchStr + ', [' + printArray(terms, exprToString) + '])'
-      )
+    var wasCompact = compact
+    if (!wasCompact) {
+      compact = expr.every(isCompact)
     }
-
-    return 'Match(' + matchStr + ', ' + exprToString(terms) + ')'
+    var out = printArray(expr, function(item) {
+      return exprToString(item, options)
+    })
+    compact = wasCompact
+    return out
   }
 
-  if ('paginate' in expr) {
-    var setStr = exprToString(expr['paginate'])
-
-    var expr2 = Object.assign({}, expr)
-    delete expr2['paginate']
-
-    if (Object.keys(expr2).length == 0) return 'Paginate(' + setStr + ')'
-
-    return 'Paginate(' + setStr + ', ' + printObject(expr2) + ')'
+  var printObject = function(obj) {
+    var keys = Object.keys(obj)
+    var length = keys.length
+    if (!length) {
+      return '{}'
+    }
+    return (
+      eol('{') +
+      indent(function() {
+        return keys
+          .map(function(key, i) {
+            keyPath.push(key)
+            var value = map(exprToString(obj[key], options), keyPath)
+            keyPath.pop()
+            return (
+              indent(key + ':' + (compact ? '' : ' ') + value) +
+              (compact && i === length - 1 ? '' : eol(','))
+            )
+          })
+          .join('')
+      }) +
+      indent('}')
+    )
   }
 
-  if ('let' in expr && 'in' in expr) {
-    var letExpr = ''
-
-    if (Array.isArray(expr['let']))
-      letExpr = '[' + printArray(expr['let'], printObject) + ']'
-    else letExpr = printObject(expr['let'])
-
-    return 'Let(' + letExpr + ', ' + exprToString(expr['in']) + ')'
+  if ('object' in expr) {
+    return printObject(expr['object'])
   }
-
-  if ('object' in expr) return printObject(expr['object'])
 
   // Versioned queries/lambdas will have an api_version field.
   // We want to prevent it from being parsed and displayed as:
@@ -175,35 +204,46 @@ var exprToString = function(expr, caller) {
   var keys = Object.keys(expr).filter(
     expression => expression !== 'api_version'
   )
-  var fn = keys[0]
+  var fn =
+    specialCases[keys[0]] ||
+    keys[0]
+      .split('_')
+      .map(function(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1)
+      })
+      .join('')
 
-  // For FQL functions with special formatting concerns, we
-  // use the specialCases object above to define their casing.
-  if (fn in specialCases) fn = specialCases[fn]
+  var wasCompact = compact
+  if (!wasCompact) {
+    compact = options.compact || keys.every(key => isCompact(expr[key]))
+  }
 
-  fn = fn
-    .split('_')
-    .map(function(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1)
+  var args = indent(function() {
+    var length = keys.length
+    return keys.map(function(key, i) {
+      keyPath.push(key)
+      var arg = expr[key]
+      var value = map(
+        fn === 'Let' && key === 'let'
+          ? Array.isArray(arg)
+            ? printArray(arg, printObject)
+            : printObject(arg)
+          : exprToString(arg, options),
+        keyPath
+      )
+      keyPath.pop()
+      return indent(value) + (compact && i === length - 1 ? '' : eol(','))
     })
-    .join('')
-
-  var args = keys.map(function(k) {
-    var v = expr[k]
-    return exprToString(v, fn)
   })
 
-  var shouldReverseArgs = ['filter', 'map', 'foreach'].some(function(fn) {
-    return fn in expr
-  })
-
+  var shouldReverseArgs = ['Filter', 'Map', 'Foreach'].indexOf(fn) != -1
   if (shouldReverseArgs) {
     args.reverse()
   }
 
-  args = args.join(', ')
-
-  return fn + '(' + args + ')'
+  var out = eol(fn + '(') + args.join('') + indent(')')
+  compact = wasCompact
+  return out
 }
 
 Expr.toString = exprToString

@@ -103,7 +103,7 @@ var isCompact = function(expr) {
   return !(expr instanceof Expr)
 }
 
-var exprToString = function(expr, options) {
+var printExpr = function(expr, options) {
   if (util.checkInstanceHasProperty(expr, '_isFaunaExpr')) {
     if ('value' in expr) {
       return expr.toString()
@@ -163,7 +163,7 @@ var exprToString = function(expr, options) {
       compact = expr.every(isCompact)
     }
     var out = printArray(expr, function(item) {
-      return exprToString(item, options)
+      return printExpr(item, options)
     })
     compact = wasCompact
     return out
@@ -181,7 +181,7 @@ var exprToString = function(expr, options) {
         return keys
           .map(function(key, i) {
             keyPath.push(key)
-            var value = map(exprToString(obj[key], options), keyPath)
+            var value = map(printExpr(obj[key], options), keyPath)
             keyPath.pop()
             return (
               indent(key + ':' + (compact ? '' : ' ') + value) +
@@ -228,7 +228,7 @@ var exprToString = function(expr, options) {
           ? Array.isArray(arg)
             ? printArray(arg, printObject)
             : printObject(arg)
-          : exprToString(arg, options),
+          : printExpr(arg, options),
         keyPath
       )
       keyPath.pop()
@@ -246,6 +246,6 @@ var exprToString = function(expr, options) {
   return out
 }
 
-Expr.toString = exprToString
+Expr.toString = printExpr
 
 module.exports = Expr

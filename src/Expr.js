@@ -195,7 +195,9 @@ var printExpr = function(expr, options) {
     if (!length) {
       return '{}'
     }
-    return (
+
+    keyPath.push('object')
+    var str =
       eol('{') +
       indent(function() {
         return keys
@@ -211,7 +213,9 @@ var printExpr = function(expr, options) {
           .join('')
       }) +
       indent('}')
-    )
+
+    keyPath.pop()
+    return str
   }
 
   if ('object' in expr) {

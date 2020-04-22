@@ -250,17 +250,24 @@ var printExpr = function(expr, options) {
       if (arg instanceof Expr) {
         arg = arg.raw
       }
-      var value = map(
-        (key == fn.toLowerCase() &&
-          (varArgsFunctions.indexOf(fn) >= 0
-            ? printArgs(arg)
-            : fn == 'Let' &&
-              (Array.isArray(arg)
-                ? printArray(arg, printObject)
-                : printObject(arg)))) ||
-          printExpr(arg, options),
-        keyPath
-      )
+      var value
+      if (fn == 'Call') {
+        if (key == 'arguments') {
+          value = printArgs(Array.isArray(arg) ? arg : [arg])
+        }
+      } else if (key == fn.toLowerCase()) {
+        if (varArgsFunctions.indexOf(fn) >= 0) {
+          value = printArgs(arg)
+        } else if (fn == 'Let') {
+          value = Array.isArray(arg)
+            ? printArray(arg, printObject)
+            : printObject(arg)
+        }
+      }
+      if (value == null) {
+        value = printExpr(arg, options)
+      }
+      value = map(value, keyPath)
       keyPath.pop()
       return indent(value) + (compact && i === length - 1 ? '' : eol(','))
     })

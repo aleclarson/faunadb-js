@@ -3,7 +3,6 @@ import { JsonObject } from './json'
 
 export module values {
   export class Value<T = any> extends Expr<T> {
-    toJSON(): object
     inspect(): string
 
     readonly _isFaunaValue?: boolean
@@ -25,6 +24,8 @@ export module values {
   export class SetRef<T = any> extends Value {
     constructor(value: string)
 
+    set: Expr
+
     /** This enforces type nominality. */
     protected _ref: { type: 'Set'; data: T }
   }
@@ -42,6 +43,7 @@ export module values {
     constructor(value: string)
     constructor(value: Date)
 
+    isoTime: string
     date: Date
   }
 
@@ -49,6 +51,7 @@ export module values {
     constructor(value: string)
     constructor(value: Date)
 
+    isoDate: string
     date: Date
   }
 
@@ -56,10 +59,14 @@ export module values {
     constructor(value: string)
     constructor(value: ArrayBuffer)
     constructor(value: Uint8Array)
+
+    bytes: string
   }
 
   export class Query extends Value {
     constructor(value: object)
+
+    query: Expr
   }
 }
 

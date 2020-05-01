@@ -13,12 +13,6 @@ function Expr(obj) {
   this.raw = obj
 }
 
-Expr.prototype._isFaunaExpr = true
-
-Expr.prototype.toJSON = function() {
-  return this.raw
-}
-
 var varArgsFunctions = [
   'Do',
   'Call',
@@ -108,7 +102,14 @@ var isCompact = function(expr) {
 
 var printExpr = function(expr, options) {
   if (util.checkInstanceHasProperty(expr, '_isFaunaExpr')) {
-    if ('value' in expr) {
+    if (
+      'id' in expr ||
+      'set' in expr ||
+      'isoTime' in expr ||
+      'bytes' in expr ||
+      'query' in expr ||
+      'value' in expr
+    ) {
       return expr.toString()
     }
     expr = expr.raw

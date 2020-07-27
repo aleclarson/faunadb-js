@@ -3,6 +3,7 @@ module.exports = {
   Expr: require('./src/Expr'),
   PageHelper: require('./src/PageHelper'),
   RequestResult: require('./src/RequestResult'),
+  FaunaJSON: require('./src/json').FaunaJSON,
 
   clientLogger: require('./src/clientLogger'),
   errors: require('./src/errors'),

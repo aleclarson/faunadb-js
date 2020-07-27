@@ -14,3 +14,8 @@ export interface JsonObject {
 }
 
 export interface JsonArray extends ReadonlyArray<Json> {}
+
+export const FaunaJSON: {
+  stringify: (input: any, pretty?: boolean) => string
+  parse: (input: string) => any
+}

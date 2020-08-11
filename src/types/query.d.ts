@@ -1,7 +1,7 @@
+import { Ref, FaunaTime } from 'fauna-lite'
 import Expr, { ExprVal, Lambda, ToExpr } from './Expr'
-import { JsonObject } from './json'
 import {
-  Ref,
+  Page,
   SetRef,
   Document,
   DocumentRef,
@@ -11,6 +11,7 @@ import {
   IndexRef,
   Function,
   FunctionRef,
+  JsonObject,
 } from './values'
 
 export type ExprArg<T = unknown> = ExprVal<T> | Array<ExprVal<T>>
@@ -19,7 +20,7 @@ export type CreateParams<T extends object> = {
   data: T
   credentials?: JsonObject
   delegates?: JsonObject
-  ttl?: Expr.Time
+  ttl?: FaunaTime
 }
 
 type Updatable<T extends object = any> =
@@ -62,11 +63,11 @@ export type CreateIndexParams<Meta extends object = any> = {
 export type TokenParams<Meta extends object = any> = {
   password: string
   data?: Meta
-  ttl?: Expr.Time
+  ttl?: FaunaTime
 }
 
 export type PaginateParams = {
-  ts?: number | Expr.Time
+  ts?: number | FaunaTime
   size?: number
   before?: string
   after?: string
@@ -83,9 +84,9 @@ export type FunctionParams<Meta extends object = any> = {
 
 export module query {
   export function Ref<T extends object>(
-    ref: CollectionRef<T>,
+    ref: ExprVal<CollectionRef<T>>,
     id?: ExprVal<number | string>
-  ): DocumentRef<T>
+  ): Expr<DocumentRef<T>>
 
   // TODO
   export function Bytes(bytes: ExprArg | ArrayBuffer | Uint8Array): Expr
@@ -163,12 +164,12 @@ export module query {
   export function Foreach<T extends Expr.Iterable>(
     collection: T,
     lambda_expr: ExprVal<Lambda<[Expr.IterableVal<T>]>>
-  ): T
+  ): ToExpr<T>
 
   export function Filter<T extends Expr.Iterable>(
     collection: T,
     lambda_expr: Expr.Filter<Expr.IterableVal<T>>
-  ): T
+  ): ToExpr<T>
 
   // TODO
   export function Take(number: ExprArg, collection: ExprArg): Expr
@@ -206,8 +207,8 @@ export module query {
   export function IsRole(expr: ExprArg): Expr
 
   export function Get<T extends object>(
-    ref: Ref<T> | SetRef<Ref<T>>,
-    ts?: ExprVal<number | Expr.Time>
+    ref: ExprVal<Ref<T>> | ExprVal<SetRef<Ref<T>>>,
+    ts?: ExprVal<number | FaunaTime>
   ): Expr<T>
 
   // TODO
@@ -219,19 +220,19 @@ export module query {
   ): Expr
 
   export function Paginate<T>(
-    set: SetRef<T>,
+    set: ExprVal<SetRef<T>>,
     params?: ExprVal<PaginateParams>
-  ): Expr.Page<T>
+  ): Expr<Page<T>>
 
-  export function Exists(ref: Ref, ts?: ExprVal<number>): Expr<boolean>
+  export function Exists(ref: ExprVal<Ref>, ts?: ExprVal<number>): Expr<boolean>
 
   export function Create<T extends object>(
-    collection_ref: CollectionRef<T>,
+    collection_ref: ExprVal<CollectionRef<T>>,
     params: ExprVal<CreateParams<T>>
   ): Expr<Document<T>>
 
   export function Update<T extends Updatable>(
-    ref: T,
+    ref: ExprVal<T>,
     params: ExprVal<UpdateParams<T>>
   ): Expr<T extends Ref<infer U> ? U : never>
 
@@ -239,7 +240,7 @@ export module query {
   export function Replace(ref: ExprArg, params: ExprArg): Expr
 
   export function Delete<T extends object>(
-    ref: Ref<T>
+    ref: ExprVal<Ref<T>>
   ): Expr<{
     data?: T
     role?: string
@@ -284,9 +285,9 @@ export module query {
   export function Events(ref_set: ExprArg): Expr
 
   export function Match<T extends object>(
-    index: IndexRef<T>,
+    index: ExprVal<IndexRef<T>>,
     ...terms: any[]
-  ): SetRef<DocumentRef<T>>
+  ): Expr<SetRef<DocumentRef<T>>>
 
   // TODO
   export function Union(...sets: ExprArg[]): Expr
@@ -297,8 +298,8 @@ export module query {
   export function Range(set: ExprArg, from: ExprArg, to: ExprArg): Expr
 
   export function Login<Meta extends object>(
-    ref: Ref | SetRef,
-    params: TokenParams<Meta>
+    ref: ExprVal<Ref> | ExprVal<SetRef>,
+    params: ExprVal<TokenParams<Meta>>
   ): Expr<{
     ref: Ref
     ts: number
@@ -356,7 +357,7 @@ export module query {
   export function UpperCase(expr: ExprArg): Expr
   export function Format(string: ExprArg, values: ExprArg): Expr
 
-  export function Time(string: ExprVal<string>): Expr.Time
+  export function Time(string: ExprVal<string>): Expr<FaunaTime>
 
   // TODO
   export function Epoch(number: ExprArg, unit: ExprArg): Expr
@@ -387,19 +388,19 @@ export module query {
   export function Index<T extends object, Meta extends object = any>(
     name: ExprVal<string>,
     scope?: ExprArg
-  ): IndexRef<T, Meta>
+  ): Expr<IndexRef<T, Meta>>
 
   // TODO: "scope" argument
   export function Collection<T extends object, Meta extends object = any>(
     name: ExprVal<string>,
     scope?: ExprArg
-  ): CollectionRef<T, Meta>
+  ): Expr<CollectionRef<T, Meta>>
 
   // TODO: "scope" argument
   export function Function<Return, Meta extends object = any>(
     name: ExprVal<string>,
     scope?: ExprArg
-  ): FunctionRef<Return, Meta>
+  ): Expr<FunctionRef<Return, Meta>>
 
   // TODO
   export function Role(name: ExprArg, scope?: ExprArg): Expr
@@ -408,13 +409,13 @@ export module query {
   export function Databases(scope?: ExprArg): Expr
 
   // TODO: "scope" argument
-  export function Collections(scope?: ExprArg): SetRef<CollectionRef>
+  export function Collections(scope?: ExprArg): Expr<SetRef<CollectionRef>>
 
   // TODO: "scope" argument
-  export function Indexes(scope?: ExprArg): SetRef<IndexRef>
+  export function Indexes(scope?: ExprArg): Expr<SetRef<IndexRef>>
 
   // TODO: "scope" argument
-  export function Functions(scope?: ExprArg): SetRef<FunctionRef>
+  export function Functions(scope?: ExprArg): Expr<SetRef<FunctionRef>>
 
   // TODO
   export function Roles(scope?: ExprArg): Expr
@@ -434,8 +435,8 @@ export module query {
   export function ContainsValue(value: ExprArg, _in: ExprArg): Expr
 
   export function Select<T>(
-    index: number,
-    from: Expr.Page<T>,
+    index: ExprVal<number>,
+    from: Expr<Page<T>>,
     _default?: ExprVal<T>
   ): ToExpr<T>
   export function Select<T = any>(
@@ -514,8 +515,8 @@ export module query {
   export function MoveDatabase(from: ExprArg, to: ExprArg): Expr
 
   export function Documents<T extends object>(
-    collection: CollectionRef<T>
-  ): SetRef<DocumentRef<T>>
+    collection: ExprVal<CollectionRef<T>>
+  ): Expr<SetRef<DocumentRef<T>>>
 
   // TODO
   export function ContainsPath(path: ExprArg, _in: ExprArg): Expr

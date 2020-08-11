@@ -12,7 +12,7 @@ export interface ClientConfig {
   observer?: (res: RequestResult, client: Client) => void
   keepAlive?: boolean
   headers?: { [key: string]: string | number }
-  fetch?: typeof fetch
+  fetch?: Function
 }
 
 export interface QueryOptions {
@@ -21,7 +21,10 @@ export interface QueryOptions {
 
 export default class Client {
   constructor(opts?: ClientConfig)
-  query<T>(expr: ExprArg<T>, options?: QueryOptions): Promise<Materialize<T>>
+  query<T = any>(
+    expr: ExprArg<T>,
+    options?: QueryOptions
+  ): Promise<Materialize<T>>
   paginate(expr: Expr, params?: object, options?: QueryOptions): PageHelper
   ping(scope?: string, timeout?: number): Promise<string>
 }

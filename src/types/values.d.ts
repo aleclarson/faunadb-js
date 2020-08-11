@@ -1,77 +1,55 @@
+import { Ref, FaunaTime, FaunaDate } from 'fauna-lite'
 import Expr from './Expr'
-import { JsonObject } from './json'
 
-export module values {
-  export class Value<T = any> extends Expr<T> {
-    inspect(): string
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonObject
+  | JsonArray
+  | FaunaVal
+  | Expr
 
-    readonly _isFaunaValue?: boolean
-  }
+export type JsonObject = {
+  [key: string]: Json | undefined
+}
 
-  export class Ref<T extends object = any> extends Value<Ref<T>> {
-    constructor(id: string, col?: CollectionRef<T>, db?: Ref)
+export interface JsonArray extends ReadonlyArray<Json> {}
 
-    id: string
-    collection?: CollectionRef<T>
-    database?: Ref
+export type FaunaVal = Ref | SetRef | FaunaTime | FaunaDate | Bytes | Query
 
-    readonly _isFaunaRef?: boolean
+export class SetRef<T = any> {
+  constructor(value: string)
 
-    /** This enforces type nominality. */
-    protected _ref: { data: T }
-  }
+  set: Expr
 
-  export class SetRef<T = any> extends Value<SetRef<T>> {
-    constructor(value: string)
+  /** This enforces type nominality. */
+  protected _ref: { type: 'Set'; data: T }
+}
 
-    set: Expr
+export class Bytes {
+  constructor(value: string)
+  constructor(value: ArrayBuffer)
+  constructor(value: Uint8Array)
 
-    /** This enforces type nominality. */
-    protected _ref: { type: 'Set'; data: T }
-  }
+  bytes: string
 
-  export class Native {
-    static readonly COLLECTIONS: Ref
-    static readonly INDEXES: Ref
-    static readonly DATABASES: Ref
-    static readonly KEYS: Ref
-    static readonly FUNCTIONS: Ref
-    static readonly ACCESS_PROVIDERS: Ref
-  }
+  /** This enforces type nominality. */
+  protected _type: 'Bytes'
+}
 
-  export class FaunaTime extends Value {
-    constructor(value: string)
-    constructor(value: Date)
+export class Query {
+  constructor(value: object)
 
-    isoTime: string
-    date: Date
-  }
+  query: Expr
 
-  export class FaunaDate extends Value {
-    constructor(value: string)
-    constructor(value: Date)
-
-    isoDate: string
-    date: Date
-  }
-
-  export class Bytes extends Value {
-    constructor(value: string)
-    constructor(value: ArrayBuffer)
-    constructor(value: Uint8Array)
-
-    bytes: string
-  }
-
-  export class Query extends Value {
-    constructor(value: object)
-
-    query: Expr
-  }
+  /** This enforces type nominality. */
+  protected _type: 'Query'
 }
 
 /** The materialized data of a page. */
-export interface Page<T> {
+export interface Page<T = any> {
   data: T[]
   after?: Expr
   before?: Expr
@@ -120,11 +98,6 @@ export interface Function<Return = any, Meta extends object = any> {
   body: JsonObject
   role?: any
 }
-
-declare const Ref: typeof values.Ref
-
-export type Ref<T extends object = any> = values.Ref<T>
-export type SetRef<T = any> = values.SetRef<T>
 
 /** The ref to a collection. */
 export abstract class CollectionRef<

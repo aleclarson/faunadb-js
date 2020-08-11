@@ -1,6 +1,6 @@
 'use strict'
 
-var util = require('./_util')
+var { toFaunaType, tagFaunaType } = require('fauna-lite')
 
 /**
  * A representation of a FaunaDB Query Expression. Generally, you shouldn't need
@@ -12,6 +12,8 @@ var util = require('./_util')
 function Expr(obj) {
   this.raw = obj
 }
+
+tagFaunaType(Expr)
 
 var varArgsFunctions = [
   'Do',
@@ -101,7 +103,7 @@ var isCompact = function(expr) {
 }
 
 var printExpr = function(expr, options) {
-  if (util.checkInstanceHasProperty(expr, '_isFaunaExpr')) {
+  if (toFaunaType(expr) == Expr) {
     if (
       'id' in expr ||
       'set' in expr ||

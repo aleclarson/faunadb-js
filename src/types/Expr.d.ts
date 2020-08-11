@@ -1,12 +1,10 @@
-import { values, Page as PageData, SetRef, Ref } from './values'
-import { JsonObject } from './json'
+import { SetRef, Page, JsonObject, FaunaVal } from './values'
 
 export default Expr
 
 export class Expr<T = any> {
   constructor(obj: JsonObject)
 
-  readonly _isFaunaExpr?: boolean
   static toString(expr: Expr, compact?: boolean): string
   static toString(
     expr: Expr,
@@ -20,13 +18,23 @@ export class Expr<T = any> {
   private _type: T
 }
 
+/** Useful for recursive mapped types */
+type Keys<T> = Extract<keyof T, string>
+
+/** Use `[T] extends [Any]` to know if a type parameter is `any` */
+declare class Any {
+  private _: never
+}
+
 /** Materialize an `Expr` type into its result type. */
-export type Materialize<T> = T extends ExprVal<Lambda>
+export type Materialize<T> = [T] extends [Any | Expr<Any>]
+  ? any
+  : T extends ExprVal<Lambda>
   ? never
-  : T extends Ref | SetRef
+  : T extends FaunaVal
   ? T
   : T extends Expr<infer U>
-  ? { [P in keyof U]: Materialize<U> }[keyof U]
+  ? { [P in Keys<U>]: Materialize<U> }[Keys<U>]
   : T extends object
   ? { [P in keyof T]: Materialize<T[P]> }
   : T
@@ -38,30 +46,28 @@ export type Materialize<T> = T extends ExprVal<Lambda>
  */
 type Eval<T> = T extends Expr<infer U>
   ? (Expr extends T ? U : never)
-  : T extends Lambda
+  : T extends Lambda | FaunaVal
   ? T
   : T extends object
-  ? { [P in keyof T]: Eval<T[P]> | NominalExpr<T[P]> }
+  ? { [P in keyof T]: Eval<T[P]> }
   : T
 
-/** Extract nominal subtypes of `Expr` */
-type NominalExpr<T> = T extends infer U
-  ? (Expr extends U ? never : Extract<U, Expr>)
-  : never
-
 /** Convert all non-`Expr` types into `Expr` types */
-export type ToExpr<T> =
-  // Preserve nominal subtypes of `Expr`
-  | NominalExpr<T>
-  // Merge plain `Expr` types with primitive types
-  | (Eval<T> extends infer U ? ([U] extends [void] ? never : Expr<U>) : never)
+export type ToExpr<T> = [T] extends [Any | Expr<Any>]
+  ? Expr
+  :
+      | Extract<T, Expr>
+      // Merge plain `Expr` types with primitive types
+      | (Eval<T> extends infer U
+          ? ([U] extends [void] ? never : Expr<U>)
+          : never)
 
 /** Add support for `Expr` types to any type. */
 export type ExprVal<T = unknown> =
   | ToExpr<T>
   | (T extends Expr
       ? never
-      : T extends Lambda
+      : T extends Lambda | FaunaVal
       ? T
       : T extends object
       ? { [P in keyof T]: ExprVal<T[P]> }
@@ -72,20 +78,6 @@ export type Lambda<In extends any[] = any[], Out = any> = (
 ) => ToExpr<Out>
 
 export namespace Expr {
-  /** The expression type for a timestamp (nanosecond precision) */
-  export class Time extends Expr<values.FaunaTime> {}
-
-  /** The expression type for a page from a paginated set returned by `q.Paginate` */
-  export class Page<T = any> extends Expr<PageData<T>> {}
-
-  /** The expression type for an iterable collection of values */
-  export type Iterable<T = any> = ExprVal<T[]> | SetRef<T> | Page<T>
-
-  /** The expression type for a single value from an iterable */
-  export type IterableVal<T extends Iterable> = T extends Iterable<infer U>
-    ? ToExpr<U>
-    : unknown
-
   /** The expression type for the `path` argument of `q.Select` */
   export type KeyPath = ExprVal<string | number | (number | string)[]>
 
@@ -93,10 +85,18 @@ export namespace Expr {
   export type Filter<T> = ExprVal<Lambda<[T], boolean>>
 
   /** The expression type that can be mapped with `q.Map` */
-  export type Mappable<T = any> = Exclude<Iterable<T>, SetRef>
+  export type Mappable<T = any> = ExprVal<T[]> | Expr<Page<T>>
 
   /** The expression type returned by `q.Map` */
   export type MapResult<T extends Mappable, Out> = T extends Page
     ? Page<Out>
     : Expr<Out[]>
+
+  /** The expression type for an iterable collection of values */
+  export type Iterable<T = any> = ExprVal<SetRef<T>> | Mappable<T>
+
+  /** The expression type for a single value from an iterable */
+  export type IterableVal<T extends Iterable> = T extends Iterable<infer U>
+    ? ToExpr<U>
+    : unknown
 }

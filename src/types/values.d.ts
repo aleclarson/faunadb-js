@@ -136,7 +136,9 @@ export abstract class CollectionRef<
 }
 
 /** The ref to a document. */
-export abstract class DocumentRef<T extends object> extends Ref<Document<T>> {
+export abstract class DocumentRef<T extends object = any> extends Ref<
+  Document<T>
+> {
   /** This enforces type nominality. */
   protected _ref: { type: 'Document'; data: Document<T> }
 }

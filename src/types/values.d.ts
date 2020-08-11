@@ -21,7 +21,7 @@ export module values {
     protected _ref: { data: T }
   }
 
-  export class SetRef<T = any> extends Value {
+  export class SetRef<T = any> extends Value<SetRef<T>> {
     constructor(value: string)
 
     set: Expr

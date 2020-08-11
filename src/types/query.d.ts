@@ -59,6 +59,12 @@ export type CreateIndexParams<Meta extends object = any> = {
   data?: Meta
 }
 
+export type TokenParams<Meta extends object = any> = {
+  password: string
+  data?: Meta
+  ttl?: Expr.Time
+}
+
 export type PaginateParams = {
   ts?: number | Expr.Time
   size?: number
@@ -288,10 +294,20 @@ export module query {
   export function Difference(...sets: ExprArg[]): Expr
   export function Distinct(set: ExprArg): Expr
   export function Join(source: ExprArg, target: ExprArg | Lambda): Expr
+  export function Range(set: ExprArg, from: ExprArg, to: ExprArg): Expr
+
+  export function Login<Meta extends object>(
+    ref: Ref | SetRef,
+    params: TokenParams<Meta>
+  ): Expr<{
+    ref: Ref
+    ts: number
+    secret: string
+    document: DocumentRef
+    data: Meta
+  }>
 
   // TODO
-  export function Range(set: ExprArg, from: ExprArg, to: ExprArg): Expr
-  export function Login(ref: ExprArg, params: ExprArg): Expr
   export function Logout(delete_tokens: ExprArg): Expr
   export function Identify(ref: ExprArg, password: ExprArg): Expr
   export function Identity(): Expr

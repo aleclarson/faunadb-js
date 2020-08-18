@@ -438,6 +438,11 @@ export module query {
     from: Expr.Page<T>,
     _default?: ExprVal<T>
   ): ToExpr<T>
+  export function Select<T extends object, P extends keyof T>(
+    key: P,
+    from: Expr<T>,
+    _default?: ExprVal<T[P]>
+  ): ToExpr<T[P]>
   export function Select<T = any>(
     path: Expr.KeyPath,
     from: ExprVal<object>,

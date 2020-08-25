@@ -12,7 +12,7 @@ export interface ClientConfig {
   observer?: (res: RequestResult, client: Client) => void
   keepAlive?: boolean
   headers?: { [key: string]: string | number }
-  fetch?: typeof fetch
+  fetch?: Function
 }
 
 export interface QueryOptions {

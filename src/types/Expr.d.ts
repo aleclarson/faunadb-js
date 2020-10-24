@@ -26,7 +26,7 @@ export type Materialize<T> = T extends ExprVal<Lambda>
   : T extends Ref | SetRef
   ? T
   : T extends Expr<infer U>
-  ? { [P in keyof U]: Materialize<U> }[keyof U]
+  ? { [P in keyof U & string]: Materialize<U> }[keyof U & string]
   : T extends object
   ? { [P in keyof T]: Materialize<T[P]> }
   : T

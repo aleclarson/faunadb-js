@@ -6,7 +6,6 @@ export default Expr
 export class Expr<T = any> {
   constructor(obj: JsonObject)
 
-  readonly _isFaunaExpr?: boolean
   static toString(expr: Expr, compact?: boolean): string
   static toString(
     expr: Expr,
@@ -18,6 +17,7 @@ export class Expr<T = any> {
 
   /** This enforces type nominality. */
   private _type: T
+  private _isFaunaExpr?: boolean
 }
 
 /** Materialize an `Expr` type into its result type. */

@@ -5,7 +5,7 @@ export module values {
   export class Value<T = any> extends Expr<T> {
     inspect(): string
 
-    readonly _isFaunaValue?: boolean
+    protected _isFaunaValue?: boolean
   }
 
   export class Ref<T extends object = any> extends Value<Ref<T>> {
@@ -15,10 +15,9 @@ export module values {
     collection?: CollectionRef<T>
     database?: Ref
 
-    readonly _isFaunaRef?: boolean
-
     /** This enforces type nominality. */
     protected _ref: { data: T }
+    protected _isFaunaRef?: boolean
   }
 
   export class SetRef<T = any> extends Value<SetRef<T>> {

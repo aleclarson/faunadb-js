@@ -1,4 +1,4 @@
-import Expr, { ExprVal, Lambda, ToExpr } from './Expr'
+import Expr, { ExprVal, Lambda, ToExpr, Materialize } from './Expr'
 import { JsonObject } from './json'
 import {
   Ref,
@@ -153,12 +153,17 @@ export module query {
     lambda_expr: ExprVal<Lambda<[Expr.IterableVal<T>], Out>>
   ): Expr.MapResult<T, Out>
 
-  // TODO
-  export function Merge(
-    object: ExprArg,
-    values: ExprArg,
+  export function Merge<T extends ExprVal<object>, U extends ExprVal<object>>(
+    object: T,
+    values: U
+  ): Expr<Materialize<T> & Materialize<U>>
+
+  // TODO: "resolver" type
+  export function Merge<T extends object>(
+    object: ExprVal<object>,
+    values: ExprVal<object>,
     resolver?: Expr | Lambda
-  ): Expr
+  ): Expr<T>
 
   export function Foreach<T extends Expr.Iterable>(
     collection: T,
